@@ -428,12 +428,13 @@ public class HollowProducer {
         try {
             // 1a. Prepare the write state
             writeEngine.prepareForNextCycle();
-            WriteState writeState = new WriteStateImpl(toVersion, objectMapper, readStates.current());
+            WriteStateImpl writeState = new WriteStateImpl(toVersion, objectMapper, readStates.current());
 
             // 2. Populate the state
             ProducerStatus.Builder populateStatus = listeners.firePopulateStart(toVersion);
             try {
                 task.populate(writeState);
+                writeState.seal();
                 populateStatus.success();
             } catch (Throwable th) {
                 populateStatus.fail(th);

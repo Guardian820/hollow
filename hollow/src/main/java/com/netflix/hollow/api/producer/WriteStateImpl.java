@@ -17,6 +17,8 @@
  */
 package com.netflix.hollow.api.producer;
 
+import static java.lang.String.format;
+
 import com.netflix.hollow.core.write.HollowWriteStateEngine;
 import com.netflix.hollow.core.write.objectmapper.HollowObjectMapper;
 
@@ -26,9 +28,12 @@ import com.netflix.hollow.core.write.objectmapper.HollowObjectMapper;
  * @author Tim Taylor {@literal<tim@toolbear.io>}
  */
 final class WriteStateImpl implements HollowProducer.WriteState {
+    private static final String LATE_MODIFICATION_MESSAGE =
+            "attempt to modify state after populate stage complete; version=%d";
     private final long version;
-    private final HollowObjectMapper objectMapper;
-    private final HollowProducer.ReadState priorReadState;
+    private HollowObjectMapper objectMapper;
+    private HollowProducer.ReadState priorReadState;
+    private volatile boolean sealed = false;
 
     protected WriteStateImpl(long version, HollowObjectMapper objectMapper, HollowProducer.ReadState priorReadState) {
         this.version = version;
@@ -38,11 +43,15 @@ final class WriteStateImpl implements HollowProducer.WriteState {
 
     @Override
     public int add(Object o) {
+        if (sealed)
+            throw new IllegalStateException(format(LATE_MODIFICATION_MESSAGE, version));
         return objectMapper.add(o);
     }
 
     @Override
     public HollowObjectMapper getObjectMapper() {
+        if (sealed)
+            throw new IllegalStateException(format(LATE_MODIFICATION_MESSAGE, version));
         return objectMapper;
     }
 
@@ -59,5 +68,9 @@ final class WriteStateImpl implements HollowProducer.WriteState {
     @Override
     public HollowProducer.ReadState getPriorState() {
         return priorReadState;
+    }
+
+    void seal() {
+        sealed = true;
     }
 }
