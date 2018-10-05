@@ -27,8 +27,8 @@ import com.netflix.hollow.core.write.objectmapper.HollowObjectMapper;
  */
 final class SealableWriteState implements HollowProducer.WriteState {
     private final long version;
-    private HollowObjectMapper objectMapper;
-    private HollowProducer.ReadState priorReadState;
+    private final HollowObjectMapper objectMapper;
+    private final HollowProducer.ReadState priorReadState;
     private volatile boolean sealed = false;
 
     SealableWriteState(long version, HollowObjectMapper objectMapper, HollowProducer.ReadState priorReadState) {
