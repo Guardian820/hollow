@@ -17,8 +17,6 @@
  */
 package com.netflix.hollow.api.producer;
 
-import static java.lang.String.format;
-
 import com.netflix.hollow.core.write.HollowWriteStateEngine;
 import com.netflix.hollow.core.write.objectmapper.HollowObjectMapper;
 
@@ -27,36 +25,36 @@ import com.netflix.hollow.core.write.objectmapper.HollowObjectMapper;
  *
  * @author Tim Taylor {@literal<tim@toolbear.io>}
  */
-final class WriteStateImpl implements HollowProducer.WriteState {
-    private static final String LATE_MODIFICATION_MESSAGE =
-            "attempt to modify state after populate stage complete; version=%d";
+final class SealableWriteState implements HollowProducer.WriteState {
     private final long version;
     private HollowObjectMapper objectMapper;
     private HollowProducer.ReadState priorReadState;
     private volatile boolean sealed = false;
 
-    protected WriteStateImpl(long version, HollowObjectMapper objectMapper, HollowProducer.ReadState priorReadState) {
+    SealableWriteState(long version, HollowObjectMapper objectMapper, HollowProducer.ReadState priorReadState) {
         this.version = version;
         this.objectMapper = objectMapper;
         this.priorReadState = priorReadState;
     }
 
     @Override
-    public int add(Object o) {
+    public int add(Object o) throws SealedWriteStateException {
         if (sealed)
-            throw new IllegalStateException(format(LATE_MODIFICATION_MESSAGE, version));
+            throw new SealedWriteStateException(this);
         return objectMapper.add(o);
     }
 
     @Override
-    public HollowObjectMapper getObjectMapper() {
+    public HollowObjectMapper getObjectMapper() throws SealedWriteStateException {
         if (sealed)
-            throw new IllegalStateException(format(LATE_MODIFICATION_MESSAGE, version));
+            throw new SealedWriteStateException(this);
         return objectMapper;
     }
 
     @Override
-    public HollowWriteStateEngine getStateEngine() {
+    public HollowWriteStateEngine getStateEngine() throws SealedWriteStateException {
+        if (sealed)
+            throw new SealedWriteStateException(this);
         return objectMapper.getStateEngine();
     }
 

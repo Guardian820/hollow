@@ -428,7 +428,7 @@ public class HollowProducer {
         try {
             // 1a. Prepare the write state
             writeEngine.prepareForNextCycle();
-            WriteStateImpl writeState = new WriteStateImpl(toVersion, objectMapper, readStates.current());
+            SealableWriteState writeState = new SealableWriteState(toVersion, objectMapper, readStates.current());
 
             // 2. Populate the state
             ProducerStatus.Builder populateStatus = listeners.firePopulateStart(toVersion);
@@ -735,11 +735,11 @@ public class HollowProducer {
     }
 
     public interface WriteState {
-        int add(Object o);
+        int add(Object o) throws SealedWriteStateException;
 
-        HollowObjectMapper getObjectMapper();
+        HollowObjectMapper getObjectMapper() throws SealedWriteStateException;
 
-        HollowWriteStateEngine getStateEngine();
+        HollowWriteStateEngine getStateEngine() throws SealedWriteStateException;
 
         ReadState getPriorState();
 

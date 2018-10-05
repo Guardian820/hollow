@@ -22,13 +22,13 @@ public class WriteStateTest {
     @Mock
     private HollowObjectMapper objectMapper;
 
-    private WriteStateImpl subject;
+    private SealableWriteState subject;
 
     @Before
     public void before() {
         when(objectMapper.getStateEngine()).thenReturn(writeStateEngine);
 
-        subject = new WriteStateImpl(13L, objectMapper, null);
+        subject = new SealableWriteState(13L, objectMapper, null);
     }
 
     @Test
@@ -54,7 +54,7 @@ public class WriteStateTest {
         try {
             subject.add("No!");
             fail("should throw");
-        } catch (IllegalStateException e) {
+        } catch (SealedWriteStateException e) {
             assertEquals("attempt to modify state after populate stage complete; version=13", e.getMessage());
         }
     }
@@ -66,7 +66,7 @@ public class WriteStateTest {
         try {
             subject.getObjectMapper();
             fail("should throw");
-        } catch (IllegalStateException e) {
+        } catch (SealedWriteStateException e) {
             assertEquals("attempt to modify state after populate stage complete; version=13", e.getMessage());
         }
     }
@@ -74,6 +74,12 @@ public class WriteStateTest {
     @Test
     public void getStateEngine_whenSealed() {
         subject.seal();
-        assertEquals(writeStateEngine, subject.getStateEngine());
+
+        try {
+            subject.getStateEngine();
+            fail("should throw");
+        } catch (SealedWriteStateException e) {
+            assertEquals("attempt to modify state after populate stage complete; version=13", e.getMessage());
+        }
     }
 }
