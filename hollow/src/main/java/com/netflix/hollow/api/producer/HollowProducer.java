@@ -434,12 +434,12 @@ public class HollowProducer {
             ProducerStatus.Builder populateStatus = listeners.firePopulateStart(toVersion);
             try {
                 task.populate(writeState);
-                writeState.seal();
                 populateStatus.success();
             } catch (Throwable th) {
                 populateStatus.fail(th);
                 throw th;
             } finally {
+                writeState.seal();
                 listeners.firePopulateComplete(populateStatus);
             }
 
