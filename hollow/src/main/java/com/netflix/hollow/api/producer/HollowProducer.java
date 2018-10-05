@@ -729,16 +729,91 @@ public class HollowProducer {
         long mint();
     }
 
+    /**
+     * Represents a procedure that populates a new data state within a {@link HollowProducer} cycle.
+     *
+     * <p>This is a functional interface whose functional method is
+     * {@link #populate(WriteState)}.
+     */
     @FunctionalInterface
     public interface Populator {
+
+        /**
+         * Populates the provided {@link WriteState} with new objects. Often written as a lambda passed in to
+         * {@link HollowProducer#runCycle(Populator)}:
+         *
+         * <pre>{@code
+         * producer.runCycle(state -> {
+         *     sourceOfTruthA = queryA();
+         *     for (Record r : sourceOfTruthA) {
+         *         Model m = new Model(r);
+         *         state.add(m);
+         *     }
+         *
+         *     sourceOfTruthB = queryB();
+         *     // ...
+         * });
+         * }</pre>
+         *
+         * <p>Notes:
+         *
+         * <ul>
+         *     <li>all data for the new state must be added; data from previous cycles is <em>not</em> carried
+         *     over automatically</li>
+         *     <li>caught exceptions that are unrecoverable must be rethrown</li>
+         *     <li>the provided {@code WriteState} will be sealed when this method returns; attempts to
+         *     add data afterwards will throw {@code SealedWriteStateException}</li>
+         *     <li>the {@code WriteState} is thread safe</li>
+         * </ul>
+         *
+         *  <p></p>Populating asynchronously has these additional requirements:
+         *  <ul>
+         *      <li>MUST NOT return from this method until all workers have completed – either normally
+         *      or exceptionally – or have been cancelled</li>
+         *      <li>MUST throw an exception if any worker completed exceptionally. MAY cancel remaining tasks
+         *      <em>or</em> wait for the remainder to complete.</li>
+         *  </ul>
+         * @param newState
+         * @throws Exception
+         */
         void populate(HollowProducer.WriteState newState) throws Exception;
     }
 
     public interface WriteState {
+        /**
+         * Adds the specified POJO to the state engine. See {@link HollowObjectMapper#add(Object)} for details.
+         *
+         * <p>Calling this method after the producer's populate stage has completed is an error.
+         *
+         * @throws SealedWriteStateException if called after the populate stage has completed (see
+         * {@link Populator} for details on the contract)
+         */
         int add(Object o) throws SealedWriteStateException;
 
+        /**
+         * For advanced use-cases, access the underlying {@link HollowObjectMapper}. Prefer using {@link #add(Object)}
+         * on this class instead.
+         *
+         * <p>Calling this method after the producer's populate stage has completed is an error. Exercise caution when
+         * saving the returned reference in a local variable that is closed over by an asynchronous task as that
+         * circumvents this guard. It is safest to call {@code writeState.getObjectMapper()} within the closure.
+         *
+         * @throws SealedWriteStateException if called after the populate stage has completed (see
+         * {@link Populator} for details on the contract)
+         */
         HollowObjectMapper getObjectMapper() throws SealedWriteStateException;
 
+        /**
+         * For advanced use-cases, access the underlying {@link HollowWriteStateEngine}. Prefer using
+         * {@link #add(Object)} on this class instead.
+         *
+         * <p>Calling this method after the producer's populate stage has completed is an error. Exercise caution when
+         * saving the returned reference in a local variable that is closed over by an asynchronous task as that
+         * circumvents this guard. It is safest to call {@code writeState.getStateEngine()} within the closure.
+         *
+         * @throws SealedWriteStateException if called after the populate stage has completed (see
+         * {@link Populator} for details on the contract)
+         */
         HollowWriteStateEngine getStateEngine() throws SealedWriteStateException;
 
         ReadState getPriorState();
